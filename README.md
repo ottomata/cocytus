@@ -4,7 +4,7 @@ This is the Cocytus project for tracking citations on Wikipedia.
 
 We are changing a __diff stream__ into a __citation delta__ stream.
 
-+ we use the [recent changes stream](https://wikitech.wikimedia.org/wiki/RCStream)
++ we use the [RecentChange stream](https://www.mediawiki.org/wiki/Manual:RCFeed) published by [EventStreams](https://wikitech.wikimedia.org/wiki/EventStreams)
 + to make queue of diffs to be inspected
 + Keep a database table of the latest version we have seen so far
 + call the wikimedia api to fetch the diff text

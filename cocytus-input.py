@@ -2,7 +2,8 @@ from rq import Queue
 from redis import Redis
 import compare_change
 import crossref_push
-import socketIO_client
+from sseclient import SSEClient as EventSource
+import json
 import time
 import signal
 import logging
@@ -27,23 +28,15 @@ signal.signal(signal.SIGALRM, alarm_handle)
 signal.siginterrupt(signal.SIGALRM, False)
 signal.alarm(alarm_interval)
 
-class WikiNamespace(socketIO_client.BaseNamespace):
-
-	def on_change(self, change):
-		logging.info(u"enqueing "+str(change))
-		while True:
-			try:
-                        	queue.enqueue(compare_change.get_changes, change)
-				break
-			except Exception as e:
-				logging.error(e.message)
-				time.sleep(1.0)
-
-	def on_connect(self):
-		self.emit(u"subscribe", u"*")
-
-
-while True:
-	socketIO = socketIO_client.SocketIO(u'stream.wikimedia.org', 80)
-	socketIO.define(WikiNamespace, u'/rc')
-	socketIO.wait(HEARTBEAT_INTERVAL + 2) # 10 minutes, in prime seconds
+for event in EventSource('https://stream.wikimedia.org/v2/stream/recentchange'):
+	try:
+		if event.event == 'message' and event.data:
+			change = json.loads(event.data)
+			logging.info(u"enqueing " + str(change))
+			queue.enqueue(compare_change.get_changes, change)
+		elif event.event == 'error':
+			logging.error(event.data)
+			time.sleep(1.0)
+	except Exception as e:
+		logging.error(e.message)
+		time.sleep(1.0)
